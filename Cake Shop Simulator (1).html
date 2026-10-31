@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cake Shop Simulator - บริหารร้านขายเค้ก</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Noto+Sans+Lao:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bakery: {
+                            50: '#fffbf5',
+                            100: '#fef3e2',
+                            200: '#fce4c4',
+                            300: '#f9cb96',
+                            400: '#f5a661',
+                            500: '#f18335',
+                            600: '#db651b',
+                            700: '#b64b15',
+                            800: '#923c18',
+                            900: '#773317',
+                        },
+                        pinkcake: '#ff758f',
+                        cream: '#fff0f3',
+                        chocolate: '#4a2c2a'
+                    },
+                    fontFamily: {
+                        kanit: ['Kanit', 'Noto Sans Lao', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Kanit', 'Noto Sans Lao', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark-glass {
+            background: rgba(30, 25, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: #f5a661; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #db651b; }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(245, 166, 97, 0.4); }
+            50% { box-shadow: 0 0 22px rgba(245, 166, 97, 0.8); }
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-stone-800 h-full flex flex-col antialiased selection:bg-bakery-400 selection:text-white">
+
+    <!-- TOP NAV HUD BAR -->
+    <header id="top-hud" class="bg-gradient-to-r from-amber-900 via-stone-800 to-amber-950 text-white shadow-lg sticky top-0 z-30 transition-all">
+        <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap justify-between items-center gap-2">
+            
+            <!-- Brand & Status -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bakery-500 to-amber-300 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-cake-candles text-xl"></i>
+                </div>
+                <div>
+                    <h1 id="hud-shop-name" class="font-bold text-lg leading-none text-amber-200">Sweet Haven Bakery</h1>
+                    <div class="flex items-center gap-2 text-xs text-stone-300 mt-1">
+                        <span id="hud-store-status" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <i class="fa-solid fa-door-open mr-1"></i><span data-i18n="store_open">เปิดร้าน</span>
+                        </span>
+                        <span class="flex items-center text-amber-300 font-semibold" title="ชื่อเสียงร้าน">
+                            <i class="fa-solid fa-star text-amber-400 mr-1 text-xs"></i>
+                            <span id="hud-reputation">2.5</span> / 5.0
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial & Clock HUD -->
+            <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <!-- Cash display -->
+                <div class="bg-stone-900/80 px-3 py-1.5 rounded-xl border border-amber-500/30 flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center font-bold text-sm">₭</div>
+                    <div>
+                        <div class="text-[10px] text-stone-400 leading-tight" data-i18n="cash">เงินสด</div>
+                        <div id="hud-cash" class="font-bold text-emerald-400 text-sm sm:text-base leading-none">₭1,000,000</div>
+                    </div>
+                </div>
+
+                <!-- Game Time & Day -->
+                <div class="bg-stone-900/80 px-3 py-1.5 rounded-xl border border-stone-700 flex items-center gap-3">
+                    <div class="text-right">
+                        <div id="hud-day" class="text-xs text-amber-300 font-medium">วันที่ 1</div>
+                        <div id="hud-clock" class="text-base font-mono font-bold text-white leading-none">08:00</div>
+                    </div>
+                    <!-- Time Speed Controls -->
+                    <div class="flex bg-stone-800 rounded-lg p-0.5 border border-stone-700">
+                        <button onclick="setGameSpeed(0)" id="btn-speed-pause" class="px-2 py-1 text-xs rounded hover:bg-stone-700 text-stone-300" title="Pause"><i class="fa-solid fa-pause"></i></button>
+                        <button onclick="setGameSpeed(1)" id="btn-speed-1" class="px-2 py-1 text-xs rounded bg-amber-500 text-stone-900 font-bold" title="1x">1x</button>
+                        <button onclick="setGameSpeed(2)" id="btn-speed-2" class="px-2 py-1 text-xs rounded hover:bg-stone-700 text-stone-300" title="2x">2x</button>
+                        <button onclick="setGameSpeed(5)" id="btn-speed-5" class="px-2 py-1 text-xs rounded hover:bg-stone-700 text-stone-300" title="5x">5x</button>
+                    </div>
+                </div>
+
+                <!-- Cloud Sync Status & User Profile -->
+                <div class="flex items-center gap-2">
+                    <span id="cloud-sync-badge" class="text-xs text-stone-400 flex items-center gap-1 bg-stone-800/80 px-2 py-1 rounded-lg border border-stone-700" title="สถานะคลาวด์">
+                        <i class="fa-solid fa-cloud-arrow-up text-amber-400"></i>
+                        <span id="cloud-sync-text" class="hidden md:inline">Sync</span>
+                    </span>
+                    <button onclick="openModal('modal-auth')" class="bg-stone-800 hover:bg-stone-700 text-amber-200 text-xs px-2.5 py-1.5 rounded-xl border border-stone-700 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-user-circle text-sm"></i>
+                        <span id="user-display-name" class="hidden sm:inline">Guest</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN NAVIGATION TABS -->
+    <nav class="bg-white border-b border-amber-200 shadow-sm sticky top-[57px] z-20">
+        <div class="max-w-7xl mx-auto px-2 flex space-x-1 overflow-x-auto no-scrollbar text-sm font-medium">
+            <button onclick="switchTab('tab-shop')" id="nav-tab-shop" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-bakery-500 text-bakery-600 font-semibold whitespace-nowrap transition">
+                <i class="fa-solid fa-store"></i> <span data-i18n="tab_shop">หน้าร้าน</span>
+            </button>
+            <button onclick="switchTab('tab-kitchen')" id="nav-tab-kitchen" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-kitchen-set"></i> <span data-i18n="tab_kitchen">ทำเค้ก</span>
+                <span id="badge-baking" class="hidden bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+            </button>
+            <button onclick="switchTab('tab-pricing')" id="nav-tab-pricing" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-tag"></i> <span data-i18n="tab_pricing">ตั้งราคา & ตู้โชว์</span>
+            </button>
+            <button onclick="switchTab('tab-market')" id="nav-tab-market" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-basket-shopping"></i> <span data-i18n="tab_market">ซื้อวัตถุดิบ</span>
+            </button>
+            <button onclick="switchTab('tab-upgrades')" id="nav-tab-upgrades" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-arrow-up-right-dots"></i> <span data-i18n="tab_upgrades">อัปเกรด</span>
+            </button>
+            <button onclick="switchTab('tab-orders')" id="nav-tab-orders" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-clipboard-list"></i> <span data-i18n="tab_orders">ออเดอร์พิเศษ</span>
+            </button>
+            <button onclick="switchTab('tab-finance')" id="nav-tab-finance" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-chart-line"></i> <span data-i18n="tab_finance">การเงิน & สถิติ</span>
+            </button>
+            <button onclick="switchTab('tab-settings')" id="nav-tab-settings" class="tab-btn px-4 py-3 flex items-center gap-2 border-b-2 border-transparent text-stone-600 hover:text-bakery-500 whitespace-nowrap transition">
+                <i class="fa-solid fa-gear"></i> <span data-i18n="tab_settings">ตั้งค่า</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 overflow-y-auto">
+
+        <!-- 1. TAB: SHOP MAIN VIEW (Interactive Bakery View) -->
+        <section id="tab-shop" class="tab-content block space-y-4">
+            
+            <!-- Controls & Quick Status -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- Open/Close Shop Banner & Event Alert -->
+                <div class="md:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-amber-200/80 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-toggle-store" onclick="toggleStoreOpen()" class="px-5 py-2.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-door-open"></i> <span id="lbl-toggle-store" data-i18n="btn_open_shop">เปิดร้านรับลูกค้า</span>
+                        </button>
+                        <div>
+                            <div class="text-xs text-stone-500" data-i18n="store_hours_hint">เวลาเปิดบริการปกติ: 08:00 - 20:00</div>
+                            <div id="event-banner" class="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 mt-1 inline-block">
+                                📢 <span id="event-text">สภาพอากาศสดใส: ลูกค้าเดินทางสะดวก</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 text-xs sm:text-sm">
+                        <div class="text-center px-3 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                            <div class="text-stone-500 text-[10px]" data-i18n="today_customers">ลูกค้าวันนี้</div>
+                            <div id="stat-today-customers" class="font-bold text-stone-800">0 คน</div>
+                        </div>
+                        <div class="text-center px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-200">
+                            <div class="text-stone-500 text-[10px]" data-i18n="today_revenue">รายรับวันนี้</div>
+                            <div id="stat-today-revenue" class="font-bold text-emerald-600">₭0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stock Overview -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200/80 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-stone-600 uppercase tracking-wide" data-i18n="shelf_status">ตู้โชว์เค้ก</span>
+                        <span id="shelf-count-badge" class="text-xs font-bold text-bakery-600">0 / 20 ชิ้น</span>
+                    </div>
+                    <div class="w-full bg-stone-100 rounded-full h-2 mb-2">
+                        <div id="shelf-progress-bar" class="bg-bakery-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <button onclick="switchTab('tab-pricing')" class="text-xs text-bakery-600 hover:text-bakery-700 font-medium flex items-center justify-end gap-1">
+                        <span data-i18n="manage_shelf">จัดการตู้โชว์</span> <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ANIMATED BAKERY CANVAS AREA -->
+            <div class="relative bg-gradient-to-b from-stone-900 to-amber-950 rounded-2xl shadow-xl overflow-hidden border-2 border-stone-800">
+                <!-- Shop Canvas -->
+                <canvas id="bakeryCanvas" class="w-full h-[360px] sm:h-[420px] block cursor-pointer"></canvas>
+                
+                <!-- Live Event Overlay Messages -->
+                <div id="customer-speech-container" class="absolute inset-0 pointer-events-none"></div>
+
+                <!-- Canvas Legend Overlay -->
+                <div class="absolute bottom-2 left-2 bg-stone-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-stone-700 text-white text-xs flex items-center gap-3">
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> <span data-i18n="legend_door">ทางเข้า</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> <span data-i18n="legend_shelf">ตู้โชว์</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span> <span data-i18n="legend_register">แคชเชียร์</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> <span data-i18n="legend_kitchen">ห้องอบเค้ก</span></span>
+                </div>
+            </div>
+
+            <!-- Live Customer Log -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-200/80">
+                <h3 class="text-sm font-bold text-stone-700 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-amber-500"></i> <span data-i18n="customer_feedback_log">บันทึกความคิดเห็นลูกค้าสด</span>
+                </h3>
+                <div id="customer-log-list" class="space-y-1.5 max-h-36 overflow-y-auto text-xs text-stone-600 divide-y divide-stone-100">
+                    <div class="py-1 text-stone-400 italic" data-i18n="log_waiting">ยังไม่มีกิจกรรมของลูกค้าในขณะนี้...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. TAB: KITCHEN / BAKING -->
+        <section id="tab-kitchen" class="tab-content hidden space-y-5">
+            <div class="flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-stone-800" data-i18n="kitchen_title">ห้องอบเค้ก (Bakery Kitchen)</h2>
+                    <p class="text-xs text-stone-500" data-i18n="kitchen_subtitle">เลือกสูตรเค้ก อบสินค้าเพื่อนำไปวางขายในร้าน</p>
+                </div>
+                <div class="text-xs bg-amber-100 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-amber-600"></i>
+                    <span><span data-i18n="active_ovens">เตาอบทำงานอยู่</span>: <b id="kitchen-oven-count">0 / 2</b></span>
+                </div>
+            </div>
+
+            <!-- ACTIVE OVENS COUNTDOWN SLOTS -->
+            <div class="bg-gradient-to-r from-stone-900 to-amber-950 p-4 rounded-2xl shadow-lg border border-stone-800 text-white">
+                <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-dumpster-fire"></i> <span data-i18n="oven_status_title">สถานะเตาอบ (Active Ovens)</span>
+                </h3>
+                <div id="active-ovens-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <!-- Oven slot elements will be injected here -->
+                </div>
+            </div>
+
+            <!-- RECIPES SELECTION GRID -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-stone-700 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open-reader text-bakery-600"></i> <span data-i18n="recipes_list">สูตรเค้กที่มีในร้าน</span>
+                </h3>
+                <div id="recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Recipe Cards injected via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. TAB: PRICING & SHELF MANAGEMENT -->
+        <section id="tab-pricing" class="tab-content hidden space-y-5">
+            <div>
+                <h2 class="text-lg font-bold text-stone-800" data-i18n="pricing_title">กำหนดราคาขาย & จัดการตู้โชว์</h2>
+                <p class="text-xs text-stone-500" data-i18n="pricing_subtitle">ตั้งราคาเค้กแต่ละชนิด ลูกค้าจะประเมินความคุ้มค่าก่อนตัดสินใจซื้อ</p>
+            </div>
+
+            <!-- Dynamic Price List Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-amber-100/60 text-stone-700 text-xs font-bold border-b border-amber-200">
+                                <th class="p-3" data-i18n="th_item">สินค้า</th>
+                                <th class="p-3" data-i18n="th_stock">จำนวนในคลัง/ตู้</th>
+                                <th class="p-3" data-i18n="th_cost">ต้นทุนต่อชิ้น</th>
+                                <th class="p-3" data-i18n="th_suggested">ราคาแนะนำ</th>
+                                <th class="p-3" data-i18n="th_selling_price">ราคาขายจริง (₭)</th>
+                                <th class="p-3" data-i18n="th_margin">กำไร/ชิ้น</th>
+                                <th class="p-3 text-center" data-i18n="th_action">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pricing-table-body" class="divide-y divide-amber-100 text-sm">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. TAB: INGREDIENT MARKET -->
+        <section id="tab-market" class="tab-content hidden space-y-5">
+            <div class="flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-stone-800" data-i18n="market_title">ตลาดวัตถุดิบ (Ingredient Market)</h2>
+                    <p class="text-xs text-stone-500" data-i18n="market_subtitle">ราคาวัตถุดิบจะผันผวนตามวัน วางแผนซื้อในราคาประหยัด!</p>
+                </div>
+                <div class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-xl border border-emerald-300">
+                    <i class="fa-solid fa-warehouse mr-1"></i> <span data-i18n="stock_capacity">ความจุคลังวัตถุดิบ</span>: <b id="market-stock-weight">0 kg</b>
+                </div>
+            </div>
+
+            <!-- Ingredients Market Grid -->
+            <div id="ingredients-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- 5. TAB: UPGRADES & STAFF -->
+        <section id="tab-upgrades" class="tab-content hidden space-y-5">
+            <div>
+                <h2 class="text-lg font-bold text-stone-800" data-i18n="upgrades_title">อัปเกรดร้าน & จ้างพนักงาน</h2>
+                <p class="text-xs text-stone-500" data-i18n="upgrades_subtitle">ขยายอุปกรณ์ เพิ่มประสิทธิภาพการผลิต และดึงดูดลูกค้ามากขึ้น</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="upgrades-container">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- 6. TAB: SPECIAL ORDERS -->
+        <section id="tab-orders" class="tab-content hidden space-y-5">
+            <div>
+                <h2 class="text-lg font-bold text-stone-800" data-i18n="orders_title">ออเดอร์พิเศษจากลูกค้า VIP</h2>
+                <p class="text-xs text-stone-500" data-i18n="orders_subtitle">ส่งมอบเค้กตามกำหนดเพื่อรับเงินรางวัลโบนัสและคะแนนความนิยมสูง!</p>
+            </div>
+
+            <div id="special-orders-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- 7. TAB: FINANCE & REPORTS -->
+        <section id="tab-finance" class="tab-content hidden space-y-5">
+            <div>
+                <h2 class="text-lg font-bold text-stone-800" data-i18n="finance_title">รายงานการเงิน & สถิติธุรกิจ</h2>
+                <p class="text-xs text-stone-500" data-i18n="finance_subtitle">ตรวจสอบรายรับ รายจ่าย ค่าเช่า ค่าไฟ และกำไรสุทธิแบบละเอียด</p>
+            </div>
+
+            <!-- Daily Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200">
+                    <div class="text-xs text-stone-500 mb-1" data-i18n="fin_total_revenue">รายรับรวมทั้งหมด</div>
+                    <div id="fin-total-revenue" class="text-xl font-bold text-emerald-600">₭0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-200">
+                    <div class="text-xs text-stone-500 mb-1" data-i18n="fin_total_expenses">รายจ่ายรวมทั้งหมด</div>
+                    <div id="fin-total-expenses" class="text-xl font-bold text-rose-600">₭0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200">
+                    <div class="text-xs text-stone-500 mb-1" data-i18n="fin_net_profit">กำไรสุทธิรวม</div>
+                    <div id="fin-net-profit" class="text-xl font-bold text-amber-600">₭0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-blue-200">
+                    <div class="text-xs text-stone-500 mb-1" data-i18n="fin_cakes_sold">จำนวนเค้กที่ขายได้</div>
+                    <div id="fin-cakes-sold" class="text-xl font-bold text-blue-600">0 ชิ้น</div>
+                </div>
+            </div>
+
+            <!-- Financial History Table -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-200">
+                <h3 class="text-sm font-bold text-stone-700 mb-3" data-i18n="daily_log_history">ประวัติผลประกอบการประจำวัน</h3>
+                <div class="overflow-x-auto max-h-72">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-stone-100 text-stone-600">
+                            <tr>
+                                <th class="p-2">วัน</th>
+                                <th class="p-2">รายรับ (Sales)</th>
+                                <th class="p-2">วัตถุดิบ (COGS)</th>
+                                <th class="p-2">ค่าเช่า/ค่าไฟ</th>
+                                <th class="p-2">กำไรสุทธิ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="finance-history-body" class="divide-y divide-stone-100">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. TAB: SETTINGS & CLOUD -->
+        <section id="tab-settings" class="tab-content hidden space-y-5">
+            <div>
+                <h2 class="text-lg font-bold text-stone-800" data-i18n="settings_title">ตั้งค่า & ข้อมูลเซฟ Cloud</h2>
+                <p class="text-xs text-stone-500" data-i18n="settings_subtitle">ปรับแต่งภาษา เสียง ระบบบันทึกเกม และการซิงค์ข้อมูล</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Game Configuration -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-200 space-y-4">
+                    <h3 class="font-bold text-stone-700 border-b border-amber-100 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-bakery-600"></i> <span data-i18n="general_settings">การตั้งค่าทั่วไป</span>
+                    </h3>
+
+                    <!-- Language Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-600 mb-1" data-i18n="select_language">เลือกภาษา (Language)</label>
+                        <select id="setting-language" onchange="changeLanguage(this.value)" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-bakery-500">
+                            <option value="th">ไทย (Thai)</option>
+                            <option value="la">ພາສາລາວ (Lao)</option>
+                            <option value="en">English</option>
+                            <option value="vi">Tiếng Việt (Vietnamese)</option>
+                            <option value="zh">中文 (Chinese)</option>
+                            <option value="ko">한국어 (Korean)</option>
+                            <option value="km">ភាសាខ្មែរ (Khmer)</option>
+                        </select>
+                    </div>
+
+                    <!-- Shop Name Edit -->
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-600 mb-1" data-i18n="edit_shop_name">ชื่อร้านเค้ก</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="setting-shop-name-input" class="flex-1 bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-sm" placeholder="Sweet Haven Bakery">
+                            <button onclick="updateShopName()" class="bg-bakery-500 hover:bg-bakery-600 text-white text-xs px-4 py-2 rounded-xl font-bold transition" data-i18n="save">บันทึก</button>
+                        </div>
+                    </div>
+
+                    <!-- Audio Toggles -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-semibold text-stone-700" data-i18n="sound_effects">เสียงเอฟเฟกต์ (SFX)</span>
+                            <input type="checkbox" id="setting-sfx" checked onchange="toggleSFX(this.checked)" class="w-4 h-4 accent-bakery-500">
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-semibold text-stone-700" data-i18n="background_music">เพลงประกอบ (BGM)</span>
+                            <input type="checkbox" id="setting-bgm" onchange="toggleBGM(this.checked)" class="w-4 h-4 accent-bakery-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloud Save / Load Controls -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-200 space-y-4">
+                    <h3 class="font-bold text-stone-700 border-b border-amber-100 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-blue-600"></i> <span data-i18n="cloud_save_status">ระบบจัดการ Save บน Cloud</span>
+                    </h3>
+
+                    <div id="cloud-info-box" class="bg-blue-50 p-3 rounded-xl border border-blue-200 text-xs text-blue-900 space-y-1">
+                        <div><b>สถานะการเชื่อมต่อ:</b> <span id="cloud-user-id">Guest Mode (Local Storage Only)</span></div>
+                        <div class="text-[11px] text-blue-700">ข้อมูลจะถูกซิงค์อัตโนมัติเมื่อทำการเปลี่ยนแปลงสำคัญ</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <button onclick="manualCloudSave()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2.5 px-3 rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_manual_save">บันทึกคลาวด์</span>
+                        </button>
+                        <button onclick="manualCloudLoad()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2.5 px-3 rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-download"></i> <span data-i18n="btn_manual_load">โหลดเซฟคลาวด์</span>
+                        </button>
+                    </div>
+
+                    <div class="border-t border-stone-200 pt-3">
+                        <button onclick="confirmResetGame()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs py-2 rounded-xl font-semibold transition" data-i18n="btn_reset_game">
+                            ⚠️ รีเซ็ตข้อมูลเกมเริ่มต้นใหม่
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: GOOGLE AUTH & ACCOUNT -->
+    <div id="modal-auth" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-amber-200">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-gradient-to-tr from-bakery-400 to-amber-300 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg">
+                    <i class="fa-solid fa-cake-candles"></i>
+                </div>
+                <h3 class="text-xl font-bold text-stone-800" data-i18n="auth_modal_title">เข้าสู่ระบบ Cake Shop Simulator</h3>
+                <p class="text-xs text-stone-500" data-i18n="auth_modal_desc">เชื่อมต่อบัญชีเพื่อบันทึกข้อมูลร้านของคุณบน Cloud ปลอดภัย เล่นต่อได้ทุกเครื่อง</p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="loginWithGooglePopup()" class="w-full bg-white hover:bg-stone-50 border border-stone-300 text-stone-700 font-semibold text-sm py-3 px-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 transition">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                    <span data-i18n="btn_login_google">เข้าสู่ระบบด้วย Google</span>
+                </button>
+                <button onclick="loginAsGuest()" class="w-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs py-2.5 px-4 rounded-2xl transition" data-i18n="btn_continue_guest">
+                    เล่นต่อในฐานะ Guest (Local Save)
+                </button>
+            </div>
+
+            <div class="text-center pt-2">
+                <button onclick="closeModal('modal-auth')" class="text-xs text-stone-400 hover:text-stone-600 font-medium" data-i18n="close">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- FIREBASE MODULE & GAME SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase state references
+        window.firebaseApp = null;
+        window.firebaseDb = null;
+        window.firebaseAuth = null;
+        window.currentUser = null;
+
+        // Custom Firebase configuration provided by user
+        const defaultFirebaseConfig = {
+            apiKey: "AIzaSyBGmRyC3uUzu9hkkZSfxbc4kzpzSgdO-LI",
+            authDomain: "my-cake-shop-d17e0.firebaseapp.com",
+            projectId: "my-cake-shop-d17e0",
+            storageBucket: "my-cake-shop-d17e0.firebasestorage.app",
+            messagingSenderId: "423504526075",
+            appId: "1:423504526075:web:f76afabb14a36daf694e5e",
+            measurementId: "G-G25R6PD6MW"
+        };
+
+        // Initialize Firebase safely
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'my-cake-shop-d17e0';
+            window.appId = appId;
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' 
+                ? JSON.parse(__firebase_config) 
+                : defaultFirebaseConfig;
+
+            window.firebaseApp = initializeApp(firebaseConfig);
+            window.firebaseDb = getFirestore(window.firebaseApp);
+            window.firebaseAuth = getAuth(window.firebaseApp);
+
+            // Auto authenticate using custom token or anonymous fallback
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(window.firebaseAuth, __initial_auth_token);
+            } else {
+                await signInAnonymously(window.firebaseAuth);
+            }
+
+            onAuthStateChanged(window.firebaseAuth, (user) => {
+                if (user) {
+                    window.currentUser = user;
+                    const userIdDisplay = document.getElementById('cloud-user-id');
+                    if (userIdDisplay) {
+                        userIdDisplay.textContent = `User: ${user.uid.substring(0, 8)}... (${user.isAnonymous ? 'Guest' : 'Google: ' + (user.displayName || 'User')})`;
+                    }
+                    const userDisplay = document.getElementById('user-display-name');
+                    if (userDisplay) {
+                        userDisplay.textContent = user.displayName || (user.isAnonymous ? 'Guest Player' : 'Bakery Owner');
+                    }
+                    updateCloudSyncBadge('synced');
+                    // Try loading save from Firestore
+                    window.loadFromFirestore();
+                } else {
+                    window.currentUser = null;
+                    const userIdDisplay = document.getElementById('cloud-user-id');
+                    if (userIdDisplay) userIdDisplay.textContent = 'Disconnected';
+                    updateCloudSyncBadge('offline');
+                }
+            });
+        } catch (err) {
+            console.warn("Firebase initialization warning:", err);
+            updateCloudSyncBadge('offline');
+        }
+
+        // Firestore Save/Load logic helper functions
+        window.saveToFirestore = async function() {
+            if (!window.firebaseDb || !window.currentUser) return false;
+            try {
+                updateCloudSyncBadge('saving');
+                const saveData = window.getGameStatePayload();
+                
+                // Save to artifact user path and root fallback for compatibility
+                const userDocRef = doc(window.firebaseDb, 'artifacts', window.appId, 'users', window.currentUser.uid, 'saveData', 'main');
+                await setDoc(userDocRef, saveData, { merge: true });
+                
+                const rootDocRef = doc(window.firebaseDb, "users", window.currentUser.uid);
+                await setDoc(rootDocRef, {
+                    score: saveData.cash || 0,
+                    level: saveData.day || 1,
+                    shopName: saveData.shopName,
+                    fullData: saveData,
+                    updatedAt: new Date()
+                }, { merge: true });
+
+                updateCloudSyncBadge('synced');
+                return true;
+            } catch (e) {
+                console.error("Cloud save failed:", e);
+                updateCloudSyncBadge('offline');
+                return false;
+            }
+        };
+
+        window.loadFromFirestore = async function() {
+            if (!window.firebaseDb || !window.currentUser) return false;
+            try {
+                updateCloudSyncBadge('saving');
+                const userDocRef = doc(window.firebaseDb, 'artifacts', window.appId, 'users', window.currentUser.uid, 'saveData', 'main');
+                let docSnap = await getDoc(userDocRef);
+                
+                if (docSnap.exists()) {
+                    window.applyGameStatePayload(docSnap.data());
+                    showToast("☁️ โหลดข้อมูลจาก Cloud สำเร็จ!", "success");
+                    updateCloudSyncBadge('synced');
+                    return true;
+                } else {
+                    // Try root fallback document
+                    const rootDocRef = doc(window.firebaseDb, "users", window.currentUser.uid);
+                    const rootSnap = await getDoc(rootDocRef);
+                    if (rootSnap.exists()) {
+                        const rootData = rootSnap.data();
+                        if (rootData.fullData) {
+                            window.applyGameStatePayload(rootData.fullData);
+                        } else if (rootData.score !== undefined) {
+                            state.cash = rootData.score;
+                            state.day = rootData.level || 1;
+                            updateHUD();
+                        }
+                        showToast("☁️ โหลดข้อมูลจาก Cloud สำเร็จ!", "success");
+                        updateCloudSyncBadge('synced');
+                        return true;
+                    }
+                }
+                updateCloudSyncBadge('synced');
+            } catch (e) {
+                console.error("Cloud load failed:", e);
+                updateCloudSyncBadge('offline');
+            }
+            return false;
+        };
+
+        // User's Login with Google function
+        window.loginWithGoogle = async function() {
+            if (!window.firebaseAuth) {
+                showToast("ระบบ Cloud ไม่พร้อมใช้งาน", "error");
+                return;
+            }
+            try {
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(window.firebaseAuth, provider);
+                window.currentUser = result.user;
+                showToast(`ล็อกอินสำเร็จ: ${result.user.displayName}`, "success");
+                closeModal('modal-auth');
+                await window.loadFromFirestore();
+            } catch (err) {
+                console.error("Google Auth error:", err);
+                showToast(`ล็อกอินไม่สำเร็จ: ${err.message}`, "error");
+            }
+        };
+        window.loginWithGooglePopup = window.loginWithGoogle;
+
+        // User's saveGameData function
+        window.saveGameData = async function(currentScore, currentLevel) {
+            if (!window.currentUser || window.currentUser.isAnonymous) {
+                showToast("กรุณาล็อกอินด้วย Google ก่อนบันทึกข้อมูล", "warning");
+                openModal('modal-auth');
+                return;
+            }
+            const success = await window.saveToFirestore();
+            if (success) {
+                showToast("บันทึกข้อมูลเซฟเกมสำเร็จ!", "success");
+            } else {
+                showToast("บันทึกข้อมูลล้มเหลว โปรดลองอีกครั้ง", "error");
+            }
+        };
+    </script>
+
+    <!-- CORE GAME ENGINE SCRIPT -->
+    <script>
+        /* ==========================================================================
+           1. GAME STATE & CONSTANTS
+           ========================================================================== */
+        const GAME_VERSION = "1.0.0";
+
+        // Initial Game State Data
+        let state = {
+            shopName: "Sweet Haven Bakery",
+            cash: 1000000, // ₭1,000,000 Lao Kip
+            reputation: 2.5, // 1.0 to 5.0 rating
+            day: 1,
+            minuteOfDay: 480, // 08:00 AM (in minutes)
+            isOpen: false,
+            speed: 1, // 0: paused, 1x, 2x, 5x
+            
+            // Financial tracking
+            todayRevenue: 0,
+            todayExpenses: 0,
+            todayCakesSold: 0,
+            totalRevenue: 0,
+            totalExpenses: 0,
+            totalCakesSold: 0,
+            financeHistory: [],
+
+            // Ingredients stock (in kg or units)
+            ingredients: {
+                flour: { name: 'แป้งเค้ก', unit: 'kg', amount: 10, basePrice: 25000, price: 25000 },
+                sugar: { name: 'น้ำตาล', unit: 'kg', amount: 8, basePrice: 18000, price: 18000 },
+                egg: { name: 'ไข่ไก่', unit: 'ฟอง', amount: 40, basePrice: 2500, price: 2500 },
+                milk: { name: 'นมสด', unit: 'ml', amount: 5000, basePrice: 20, price: 20 }, // ₭20 per ml
+                butter: { name: 'เนยสด', unit: 'g', amount: 2000, basePrice: 40, price: 40 },
+                cocoa: { name: 'ผงโกโก้', unit: 'g', amount: 1000, basePrice: 50, price: 50 },
+                cream: { name: 'วิปปิ้งครีม', unit: 'ml', amount: 3000, basePrice: 30, price: 30 },
+                strawberry: { name: 'สตรอว์เบอร์รี', unit: 'g', amount: 1000, basePrice: 80, price: 80 },
+                blueberry: { name: 'บลูเบอร์รี', unit: 'g', amount: 1000, basePrice: 90, price: 90 },
+                cheese: { name: 'ครีมชีส', unit: 'g', amount: 1000, basePrice: 70, price: 70 },
+                vanilla: { name: 'วานิลลา', unit: 'ml', amount: 500, basePrice: 100, price: 100 },
+                chocolate: { name: 'ช็อกโกแลตแท่ง', unit: 'g', amount: 1000, basePrice: 60, price: 60 }
+            },
+
+            // Recipes master definition
+            recipes: {
+                choco_cake: {
+                    id: 'choco_cake',
+                    name: 'เค้กช็อกโกแลต',
+                    icon: '🎂',
+                    bakeTime: 30, // seconds
+                    ingredients: { flour: 0.3, sugar: 0.15, egg: 3, milk: 200, butter: 100, cocoa: 50 },
+                    cost: 25000,
+                    suggestedPrice: 45000,
+                    sellingPrice: 45000,
+                    shelfLifeDays: 3
+                },
+                vanilla_sponge: {
+                    id: 'vanilla_sponge',
+                    name: 'เค้กวานิลลาสปอนจ์',
+                    icon: '🍰',
+                    bakeTime: 25,
+                    ingredients: { flour: 0.3, sugar: 0.2, egg: 4, milk: 250, butter: 120, vanilla: 10 },
+                    cost: 20000,
+                    suggestedPrice: 38000,
+                    sellingPrice: 38000,
+                    shelfLifeDays: 3
+                },
+                strawberry_shortcake: {
+                    id: 'strawberry_shortcake',
+                    name: 'สตรอว์เบอร์รี ชอร์ตเค้ก',
+                    icon: '🍓',
+                    bakeTime: 35,
+                    ingredients: { flour: 0.25, sugar: 0.15, egg: 3, cream: 200, butter: 100, strawberry: 150 },
+                    cost: 32000,
+                    suggestedPrice: 60000,
+                    sellingPrice: 60000,
+                    shelfLifeDays: 2
+                },
+                blueberry_cheesecake: {
+                    id: 'blueberry_cheesecake',
+                    name: 'บลูเบอร์รีชีสเค้ก',
+                    icon: '🫐',
+                    bakeTime: 40,
+                    ingredients: { flour: 0.15, butter: 100, cheese: 300, sugar: 0.1, cream: 150, blueberry: 120 },
+                    cost: 42000,
+                    suggestedPrice: 85000,
+                    sellingPrice: 85000,
+                    shelfLifeDays: 4
+                },
+                cupcake_trio: {
+                    id: 'cupcake_trio',
+                    name: 'คัพเค้กสามสี',
+                    icon: '🧁',
+                    bakeTime: 20,
+                    ingredients: { flour: 0.15, sugar: 0.1, egg: 2, butter: 80, milk: 100 },
+                    cost: 15000,
+                    suggestedPrice: 28000,
+                    sellingPrice: 28000,
+                    shelfLifeDays: 3
+                },
+                brownie_slice: {
+                    id: 'brownie_slice',
+                    name: 'ช็อกโกแลตบราวนี',
+                    icon: '🍫',
+                    bakeTime: 25,
+                    ingredients: { flour: 0.1, chocolate: 200, butter: 150, sugar: 0.2, egg: 3 },
+                    cost: 28000,
+                    suggestedPrice: 50000,
+                    sellingPrice: 50000,
+                    shelfLifeDays: 5
+                }
+            },
+
+            // Inventory of finished baked cakes ready on shelf
+            shelf: [
+                { recipeId: 'choco_cake', count: 5, quality: 95, expDay: 4 },
+                { recipeId: 'vanilla_sponge', count: 5, quality: 90, expDay: 4 }
+            ],
+
+            // Active Ovens undergoing baking
+            activeOvens: [],
+
+            // Upgrades levels
+            upgrades: {
+                ovenLevel: 1, // 1: 2 slots, 2: 4 slots, 3: 6 slots (faster speed)
+                fridgeLevel: 1, // Reduces quality decay rate
+                shelfLevel: 1, // Max shelf capacity: L1=20, L2=40, L3=80
+                decorLevel: 1, // Boosts customer patience & reputation
+                cashierLevel: 0 // 0: manual/slow, 1: hired staff cashier (auto sell boost)
+            },
+
+            // Special VIP Orders
+            specialOrders: [
+                {
+                    id: 1,
+                    customerName: "คุณสมชาย",
+                    recipeId: "strawberry_shortcake",
+                    count: 3,
+                    dueDay: 2,
+                    reward: 250000,
+                    completed: false
+                }
+            ],
+
+            // Settings
+            settings: {
+                language: 'th',
+                sfx: true,
+                bgm: false
+            }
+        };
+
+        // Active AI Customers walking inside shop
+        let activeCustomers = [];
+        let customerIdCounter = 1;
+
+        // Sound Audio Context
+        let audioCtx = null;
+
+        /* ==========================================================================
+           2. I18N DICTIONARIES
+           ========================================================================== */
+        const i18n = {
+            th: {
+                store_open: "เปิดร้าน",
+                store_closed: "ปิดร้าน",
+                cash: "เงินสด",
+                tab_shop: "หน้าร้าน",
+                tab_kitchen: "ทำเค้ก",
+                tab_pricing: "ตั้งราคา & ตู้โชว์",
+                tab_market: "ซื้อวัตถุดิบ",
+                tab_upgrades: "อัปเกรด",
+                tab_orders: "ออเดอร์พิเศษ",
+                tab_finance: "การเงิน & สถิติ",
+                tab_settings: "ตั้งค่า",
+                btn_open_shop: "เปิดร้านรับลูกค้า",
+                btn_close_shop: "ปิดร้านชั่วคราว",
+                store_hours_hint: "เวลาเปิดบริการปกติ: 08:00 - 20:00",
+                today_customers: "ลูกค้าวันนี้",
+                today_revenue: "รายรับวันนี้",
+                shelf_status: "ตู้โชว์เค้ก",
+                manage_shelf: "จัดการตู้โชว์",
+                customer_feedback_log: "บันทึกความคิดเห็นลูกค้าสด",
+                log_waiting: "ยังไม่มีกิจกรรมของลูกค้าในขณะนี้...",
+                kitchen_title: "ห้องอบเค้ก (Bakery Kitchen)",
+                kitchen_subtitle: "เลือกสูตรเค้ก อบสินค้าเพื่อนำไปวางขายในร้าน",
+                active_ovens: "เตาอบทำงานอยู่",
+                oven_status_title: "สถานะเตาอบ (Active Ovens)",
+                recipes_list: "สูตรเค้กที่มีในร้าน",
+                pricing_title: "กำหนดราคาขาย & จัดการตู้โชว์",
+                pricing_subtitle: "ตั้งราคาเค้กแต่ละชนิด ลูกค้าจะประเมินความคุ้มค่าก่อนตัดสินใจซื้อ",
+                market_title: "ตลาดวัตถุดิบ (Ingredient Market)",
+                market_subtitle: "ราคาวัตถุดิบจะผันผวนตามวัน วางแผนซื้อในราคาประหยัด!",
+                upgrades_title: "อัปเกรดร้าน & จ้างพนักงาน",
+                upgrades_subtitle: "ขยายอุปกรณ์ เพิ่มประสิทธิภาพการผลิต และดึงดูดลูกค้ามากขึ้น",
+                orders_title: "ออเดอร์พิเศษจากลูกค้า VIP",
+                orders_subtitle: "ส่งมอบเค้กตามกำหนดเพื่อรับเงินรางวัลโบนัสและคะแนนความนิยมสูง!",
+                finance_title: "รายงานการเงิน & สถิติธุรกิจ",
+                finance_subtitle: "ตรวจสอบรายรับ รายจ่าย ค่าเช่า ค่าไฟ และกำไรสุทธิแบบละเอียด",
+                settings_title: "ตั้งค่า & ข้อมูลเซฟ Cloud",
+                legend_door: "ทางเข้า",
+                legend_shelf: "ตู้โชว์",
+                legend_register: "แคชเชียร์",
+                legend_kitchen: "ห้องอบเค้ก",
+                th_item: "สินค้า",
+                th_stock: "จำนวนในคลัง/ตู้",
+                th_cost: "ต้นทุนต่อชิ้น",
+                th_suggested: "ราคาแนะนำ",
+                th_selling_price: "ราคาขายจริง (₭)",
+                th_margin: "กำไร/ชิ้น",
+                th_action: "การจัดการ",
+                btn_manual_save: "บันทึกคลาวด์",
+                btn_manual_load: "โหลดเซฟคลาวด์",
+                btn_reset_game: "⚠️ รีเซ็ตข้อมูลเกมเริ่มต้นใหม่"
+            },
+            la: {
+                store_open: "ເປີດຮ້ານ",
+                store_closed: "ປິດຮ້ານ",
+                cash: "ເງິນສົດ",
+                tab_shop: "ໜ້າຮ້ານ",
+                tab_kitchen: "ເຮັດເຄັກ",
+                tab_pricing: "ຕັ້ງລາຄາ & ຕູ້ໂຊ",
+                tab_market: "ຊື້ວັດຖຸດິບ",
+                tab_upgrades: "ອັບເກຣດ",
+                tab_orders: "ອໍເດີ້ພິເສດ",
+                tab_finance: "ການເງິນ & ສະຖິຕິ",
+                tab_settings: "ຕັ້ງຄ່າ",
+                btn_open_shop: "ເປີດຮ້ານຮັບລູກຄ້າ",
+                btn_close_shop: "ປິດຮ້ານຊົ່ວຄາວ",
+                store_hours_hint: "ເວລາເປີດບໍລິການ: 08:00 - 20:00",
+                today_customers: "ລູກຄ້າມື້ນີ້",
+                today_revenue: "ລາຍຮັບມື້ນີ້",
+                shelf_status: "ຕູ້ໂຊເຄັກ",
+                manage_shelf: "ຈັດການຕູ້ໂຊ",
+                customer_feedback_log: "ບັນທຶກຄຳຄິດເຫັນລູກຄ້າ",
+                log_waiting: "ຍັງບໍ່ມີກິດຈະກຳຂອງລູກຄ້າ...",
+                kitchen_title: "ຫ້ອງອົບເຄັກ (Bakery Kitchen)",
+                kitchen_subtitle: "ເລືອກສູດເຄັກ ອົບສິນຄ້າເພື່ອວາງຂາຍໃນຮ້ານ",
+                active_ovens: "ເຕົາອົບກຳລັງເຮັດວຽກ",
+                oven_status_title: "ສະຖານະເຕົາອົບ",
+                recipes_list: "ສູດເຄັກທີ່ມີໃນຮ້ານ",
+                pricing_title: "ຕັ້ງລາຄາຂາຍ & ຈັດການຕູ້ໂຊ",
+                pricing_subtitle: "ຕັ້ງລາຄາເຄັກ ລູກຄ້າຈະປະເມິນຄວາມຄຸ້ມຄ່າກ່ອນຊື້",
+                market_title: "ຕະຫຼາດວັດຖຸດິບ",
+                market_subtitle: "ລາຄາວັດຖຸດິບຈະປ່ຽນແປງຕາມວັນ",
+                upgrades_title: "ອັບເກຣດຮ້ານ & ຈ້າງພະນັກງານ",
+                upgrades_subtitle: "ເພີ່ມປະສິດທິພາບການຜະລິດ",
+                orders_title: "ອໍເດີ້ພິເສດຈາກລູກຄ້າ VIP",
+                orders_subtitle: "ສົ່ງເຄັກຕາມກຳນົດເພື່ອຮັບໂບນັດ",
+                finance_title: "ລາຍງານການເງິນ",
+                finance_subtitle: "ກວດສອບລາຍຮັບ ລາຍຈ່າຍ ແລະ ກຳໄລ",
+                settings_title: "ຕັ້ງຄ່າ & Cloud Save",
+                legend_door: "ທາງເຂົ້າ",
+                legend_shelf: "ຕູ້ໂຊ",
+                legend_register: "ແຄດເຊຍ",
+                legend_kitchen: "ຫ້ອງອົບ",
+                th_item: "ສິນຄ້າ",
+                th_stock: "ຈຳນວນໃນຕູ້",
+                th_cost: "ຕົ້ນທຶນ/ຊິ້ນ",
+                th_suggested: "ລາຄາແນະນຳ",
+                th_selling_price: "ລາຄາຂາຍ (₭)",
+                th_margin: "ກຳໄລ/ຊິ້ນ",
+                th_action: "ຈັດການ",
+                btn_manual_save: "ບັນທຶກ Cloud",
+                btn_manual_load: "ໂຫລດ Cloud",
+                btn_reset_game: "⚠️ ຣີເຊັດເກມ"
+            },
+            en: {
+                store_open: "OPEN",
+                store_closed: "CLOSED",
+                cash: "Cash",
+                tab_shop: "Shop",
+                tab_kitchen: "Baking Kitchen",
+                tab_pricing: "Pricing & Shelf",
+                tab_market: "Ingredients",
+                tab_upgrades: "Upgrades",
+                tab_orders: "Special Orders",
+                tab_finance: "Finance",
+                tab_settings: "Settings",
+                btn_open_shop: "Open Bakery Store",
+                btn_close_shop: "Close Bakery Store",
+                store_hours_hint: "Normal Business Hours: 08:00 - 20:00",
+                today_customers: "Today's Guests",
+                today_revenue: "Today's Revenue",
+                shelf_status: "Display Shelf",
+                manage_shelf: "Manage Shelf",
+                customer_feedback_log: "Live Customer Log",
+                log_waiting: "No customer activity yet...",
+                kitchen_title: "Baking Kitchen",
+                kitchen_subtitle: "Select recipes and bake cakes for your store",
+                active_ovens: "Active Ovens",
+                oven_status_title: "Oven Slots Status",
+                recipes_list: "Available Recipes",
+                pricing_title: "Set Prices & Manage Display",
+                pricing_subtitle: "Price your cakes carefully. Customers react to perceived value!",
+                market_title: "Ingredient Market",
+                market_subtitle: "Market prices fluctuate daily. Buy smart!",
+                upgrades_title: "Store Upgrades & Staff",
+                upgrades_subtitle: "Expand equipment, baking capacity and hire helpers",
+                orders_title: "VIP Special Orders",
+                orders_subtitle: "Complete order deadlines for bonus cash and reputation!",
+                finance_title: "Financial Statements & Analytics",
+                finance_subtitle: "Track revenues, COGS, rent, electricity and net profit",
+                settings_title: "Settings & Cloud Saves",
+                legend_door: "Door",
+                legend_shelf: "Display",
+                legend_register: "Cashier",
+                legend_kitchen: "Kitchen",
+                th_item: "Item",
+                th_stock: "Shelf Stock",
+                th_cost: "Cost/Unit",
+                th_suggested: "Suggested",
+                th_selling_price: "Price (₭)",
+                th_margin: "Profit/Unit",
+                th_action: "Action",
+                btn_manual_save: "Cloud Save",
+                btn_manual_load: "Cloud Load",
+                btn_reset_game: "⚠️ Reset Game Data"
+            }
+        };
+
+        function t(key) {
+            const lang = state.settings.language || 'th';
+            if (i18n[lang] && i18n[lang][key]) return i18n[lang][key];
+            if (i18n['th'][key]) return i18n['th'][key];
+            return key;
+        }
+
+        function applyI18nTexts() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                el.textContent = t(k);
+            });
+        }
+
+        /* ==========================================================================
+           3. AUDIO SYNTHESIZER (WEB AUDIO API)
+           ========================================================================== */
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtxClass) audioCtx = new AudioCtxClass();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSFX(type) {
+            if (!state.settings.sfx) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'cash') {
+                // Cha-ching metallic sweep
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.exponentialRampToValueAtTime(1318.51, now + 0.1); // E6
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'ding') {
+                // Oven bell tone
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1567.98, now); // G6
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                osc.start(now);
+                osc.stop(now + 0.8);
+            } else if (type === 'click') {
+                // Soft click pop
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.05);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'doorbell') {
+                // Two-tone chime
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(659.25, now); // E5
+                osc.frequency.setValueAtTime(523.25, now + 0.15); // C5
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+        }
+
+        /* ==========================================================================
+           4. GAME TICK & SIMULATION LOOP
+           ========================================================================== */
+        let lastTimestamp = 0;
+        let minuteAccumulator = 0;
+
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const deltaMs = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            if (state.speed > 0) {
+                // In game: 1 real second = 2 game minutes at 1x speed
+                const gameMinutesPassed = (deltaMs / 1000) * 2 * state.speed;
+                minuteAccumulator += gameMinutesPassed;
+
+                if (minuteAccumulator >= 1) {
+                    const minutesToAdd = Math.floor(minuteAccumulator);
+                    minuteAccumulator -= minutesToAdd;
+                    advanceGameMinutes(minutesToAdd);
+                }
+
+                // Update real-time baking ovens countdown
+                updateOvens(deltaMs / 1000 * state.speed);
+
+                // Update active customer AI animations & behavior
+                updateCustomers(deltaMs / 1000 * state.speed);
+            }
+
+            // Render 2D Bakery Canvas Scene
+            renderBakeryCanvas();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function advanceGameMinutes(mins) {
+            state.minuteOfDay += mins;
+
+            // Auto Store Hours Management
+            if (state.minuteOfDay >= 480 && state.minuteOfDay < 1200) { // 08:00 to 20:00
+                if (!state.isOpen && state.minuteOfDay === 480) {
+                    state.isOpen = true;
+                    showToast("☀️ ร้านเปิดแล้ว! ยินดีต้อนรับลูกค้า", "info");
+                    playSFX('doorbell');
+                }
+            } else {
+                if (state.isOpen) {
+                    state.isOpen = false;
+                    showToast("🌙 ถึงเวลาปิดร้านแล้ว (20:00 น.)", "info");
+                }
+            }
+
+            // End of Day Trigger at 24:00 (1440 mins)
+            if (state.minuteOfDay >= 1440) {
+                state.minuteOfDay -= 1440;
+                processEndOfDay();
+            }
+
+            updateHUD();
+        }
+
+        function processEndOfDay() {
+            state.day += 1;
+
+            // Daily Operating Expenses
+            const rent = 50000; // ₭50,000/day
+            const power = 20000; // ₭20,000/day
+            const staffSalary = state.upgrades.cashierLevel * 40000;
+            const totalDailyOps = rent + power + staffSalary;
+
+            state.cash = Math.max(0, state.cash - totalDailyOps);
+            state.todayExpenses += totalDailyOps;
+
+            const dailyNetProfit = state.todayRevenue - state.todayExpenses;
+
+            // Record financial history
+            state.financeHistory.unshift({
+                day: state.day - 1,
+                revenue: state.todayRevenue,
+                cogs: state.todayExpenses - totalDailyOps,
+                expenses: totalDailyOps,
+                netProfit: dailyNetProfit
+            });
+
+            // Fluctuate market ingredient prices (+- 15%)
+            for (let k in state.ingredients) {
+                const item = state.ingredients[k];
+                const factor = 0.85 + Math.random() * 0.3;
+                item.price = Math.round(item.basePrice * factor);
+            }
+
+            // Expire old cakes on shelf
+            state.shelf.forEach(item => {
+                if (item.expDay <= state.day) {
+                    if (item.count > 0) {
+                        showToast(`🗑️ ${getRecipe(item.recipeId).name} หมดอายุแล้ว (${item.count} ชิ้น)`, "error");
+                        item.count = 0;
+                    }
+                }
+            });
+            state.shelf = state.shelf.filter(i => i.count > 0);
+
+            // Show Day Summary Toast / Modal
+            showToast(`📅 วันที่ ${state.day - 1} สิ้นสุดแล้ว! กำไรสุทธิ: ₭${formatNumber(dailyNetProfit)}`, dailyNetProfit >= 0 ? "success" : "error");
+
+            // Reset Today Stats
+            state.todayRevenue = 0;
+            state.todayExpenses = 0;
+            state.todayCakesSold = 0;
+
+            // Trigger Cloud Auto Save
+            if (window.saveToFirestore) window.saveToFirestore();
+            saveLocalBackup();
+
+            renderPricingTable();
+            renderIngredientsMarket();
+            renderFinanceTab();
+        }
+
+        /* ==========================================================================
+           5. BAKING & KITCHEN LOGIC
+           ========================================================================== */
+        function getRecipe(recipeId) {
+            return state.recipes[recipeId];
+        }
+
+        function getMaxOvenSlots() {
+            // L1 = 2, L2 = 4, L3 = 6
+            return state.upgrades.ovenLevel * 2;
+        }
+
+        function bakeCake(recipeId) {
+            const recipe = getRecipe(recipeId);
+            if (!recipe) return;
+
+            // Check Oven Slot Availability
+            if (state.activeOvens.length >= getMaxOvenSlots()) {
+                showToast("⚠️ เตาอบเต็มแล้ว! โปรดรอให้การอบเสร็จสิ้นหรืออัปเกรดเตาอบ", "warning");
+                return;
+            }
+
+            // Check Ingredient stock
+            for (let ingKey in recipe.ingredients) {
+                const required = recipe.ingredients[ingKey];
+                const available = state.ingredients[ingKey] ? state.ingredients[ingKey].amount : 0;
+                if (available < required) {
+                    const ingName = state.ingredients[ingKey] ? state.ingredients[ingKey].name : ingKey;
+                    showToast(`❌ วัตถุดิบไม่เพียงพอ: ขาด ${ingName}`, "error");
+                    return;
+                }
+            }
+
+            // Deduct Ingredients
+            for (let ingKey in recipe.ingredients) {
+                state.ingredients[ingKey].amount -= recipe.ingredients[ingKey];
+            }
+
+            // Calculate Oven Speed Boost (L1: 1.0x, L2: 1.3x, L3: 1.7x)
+            const speedFactor = 1 + (state.upgrades.ovenLevel - 1) * 0.35;
+            const finalBakeTime = recipe.bakeTime / speedFactor;
+
+            // Add to active ovens
+            state.activeOvens.push({
+                id: Date.now() + Math.random(),
+                recipeId: recipeId,
+                totalTime: finalBakeTime,
+                remainingTime: finalBakeTime
+            });
+
+            playSFX('click');
+            showToast(`👨‍🍳 เริ่มอบ ${recipe.name}...`, "info");
+
+            renderKitchenTab();
+            renderIngredientsMarket();
+        }
+
+        function updateOvens(deltaSeconds) {
+            if (state.activeOvens.length === 0) return;
+
+            for (let i = state.activeOvens.length - 1; i >= 0; i--) {
+                let oven = state.activeOvens[i];
+                oven.remainingTime -= deltaSeconds;
+
+                if (oven.remainingTime <= 0) {
+                    // Baking completed!
+                    const recipe = getRecipe(oven.recipeId);
+                    
+                    // Add to shelf inventory (or stack existing)
+                    let existing = state.shelf.find(s => s.recipeId === oven.recipeId);
+                    if (existing) {
+                        existing.count += 5; // Yields 5 slices/items per batch
+                    } else {
+                        state.shelf.push({
+                            recipeId: oven.recipeId,
+                            count: 5,
+                            quality: 95,
+                            expDay: state.day + recipe.shelfLifeDays
+                        });
+                    }
+
+                    showToast(`✨ อบเสร็จแล้ว! ได้รับ ${recipe.name} +5 ชิ้น`, "success");
+                    playSFX('ding');
+
+                    state.activeOvens.splice(i, 1);
+                    renderKitchenTab();
+                    renderPricingTable();
+                }
+            }
+            updateActiveOvenUI();
+        }
+
+        /* ==========================================================================
+           6. CUSTOMER AI & PRICE SENSITIVITY SYSTEM
+           ========================================================================== */
+        function updateCustomers(deltaSec) {
+            // Spawn Customer logic when store is open
+            if (state.isOpen) {
+                // Spawn chance depends on store reputation & peak hours
+                const currentHour = Math.floor(state.minuteOfDay / 60);
+                let peakMultiplier = 1.0;
+                if ((currentHour >= 11 && currentHour <= 13) || (currentHour >= 16 && currentHour <= 18)) {
+                    peakMultiplier = 1.6;
+                }
+
+                const spawnInterval = Math.max(2, 12 / (state.reputation * peakMultiplier));
+                if (Math.random() < (deltaSec / spawnInterval)) {
+                    spawnCustomer();
+                }
+            }
+
+            // Move & process customers
+            const canvas = document.getElementById('bakeryCanvas');
+            const cw = canvas ? canvas.width : 800;
+            const ch = canvas ? canvas.height : 400;
+
+            const doorX = 60, doorY = ch - 50;
+            const shelfX = cw / 2, shelfY = ch / 2;
+            const cashierX = cw - 100, cashierY = ch / 2;
+
+            for (let i = activeCustomers.length - 1; i >= 0; i--) {
+                let c = activeCustomers[i];
+
+                if (c.state === 'ENTERING') {
+                    // Move towards shelf
+                    moveToTarget(c, shelfX + (Math.random() * 40 - 20), shelfY, deltaSec * c.speed);
+                    if (getDist(c.x, c.y, shelfX, shelfY) < 30) {
+                        c.state = 'DECIDING';
+                        c.timer = 2.0; // Thinks for 2 seconds
+                    }
+                } else if (c.state === 'DECIDING') {
+                    c.timer -= deltaSec;
+                    if (c.timer <= 0) {
+                        evaluateShelfAndBuy(c);
+                    }
+                } else if (c.state === 'GOING_TO_CASHIER') {
+                    moveToTarget(c, cashierX, cashierY, deltaSec * c.speed);
+                    if (getDist(c.x, c.y, cashierX, cashierY) < 25) {
+                        c.state = 'PAYING';
+                        c.timer = 1.0;
+                    }
+                } else if (c.state === 'PAYING') {
+                    c.timer -= deltaSec;
+                    if (c.timer <= 0) {
+                        // Complete Payment transaction
+                        completeCustomerTransaction(c);
+                        c.state = 'LEAVING';
+                    }
+                } else if (c.state === 'LEAVING') {
+                    moveToTarget(c, doorX, doorY, deltaSec * c.speed);
+                    if (getDist(c.x, c.y, doorX, doorY) < 30) {
+                        activeCustomers.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function spawnCustomer() {
+            if (activeCustomers.length >= 8) return; // Cap simultaneous customers
+
+            const canvas = document.getElementById('bakeryCanvas');
+            const ch = canvas ? canvas.height : 400;
+
+            const avatars = ['🧑', '👩', '👴', '👵', '🧔', '👩‍🦰', '👱‍♂️'];
+            const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+
+            activeCustomers.push({
+                id: customerIdCounter++,
+                avatar: randomAvatar,
+                x: 60,
+                y: ch - 50,
+                budget: Math.round(30000 + Math.random() * 120000),
+                patience: 10 + state.upgrades.decorLevel * 3,
+                state: 'ENTERING',
+                speed: 60 + Math.random() * 30,
+                selectedItem: null,
+                bubbleText: null,
+                bubbleColor: 'bg-white'
+            });
+
+            playSFX('doorbell');
+        }
+
+        function evaluateShelfAndBuy(customer) {
+            // Filter available shelf items with stock > 0
+            const available = state.shelf.filter(s => s.count > 0);
+
+            if (available.length === 0) {
+                customer.bubbleText = '😭 เค้กหมด!';
+                customer.bubbleColor = 'bg-rose-100 text-rose-800';
+                customer.state = 'LEAVING';
+                addCustomerLog(`Customer ${customer.id}: เค้กในตู้หมดร้าน เดินออกจากร้าน`);
+                adjustReputation(-0.05);
+                return;
+            }
+
+            // Pick a random desired cake from shelf
+            const chosenShelfItem = available[Math.floor(Math.random() * available.length)];
+            const recipe = getRecipe(chosenShelfItem.recipeId);
+
+            // Price Sensitivity Algorithm
+            const sellingPrice = recipe.sellingPrice || recipe.suggestedPrice;
+            const priceRatio = sellingPrice / recipe.suggestedPrice;
+
+            if (sellingPrice > customer.budget) {
+                customer.bubbleText = '💸 งบไม่พอ!';
+                customer.bubbleColor = 'bg-amber-100 text-amber-800';
+                customer.state = 'LEAVING';
+                addCustomerLog(`Customer ${customer.id}: งบประมาณไม่พอซื้อ ${recipe.name}`);
+            } else if (priceRatio > 1.45) {
+                // Too expensive!
+                customer.bubbleText = '😠 แพงเกินไป!';
+                customer.bubbleColor = 'bg-rose-200 text-rose-900';
+                customer.state = 'LEAVING';
+                addCustomerLog(`Customer ${customer.id}: ไม่พอใจราคา ${recipe.name} (₭${formatNumber(sellingPrice)}) แพงเกินไป`);
+                adjustReputation(-0.08);
+            } else {
+                // Willing to buy!
+                customer.selectedItem = chosenShelfItem;
+                customer.bubbleText = priceRatio <= 0.9 ? '😍 ราคาสุดคุ้ม!' : '😊 น่ากินจัง!';
+                customer.bubbleColor = priceRatio <= 0.9 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-stone-800';
+                customer.state = 'GOING_TO_CASHIER';
+            }
+        }
+
+        function completeCustomerTransaction(customer) {
+            if (!customer.selectedItem) return;
+            const shelfItem = state.shelf.find(s => s.recipeId === customer.selectedItem.recipeId);
+            if (!shelfItem || shelfItem.count <= 0) return;
+
+            const recipe = getRecipe(shelfItem.recipeId);
+            const price = recipe.sellingPrice || recipe.suggestedPrice;
+
+            // Deduct stock
+            shelfItem.count -= 1;
+            state.cash += price;
+            state.todayRevenue += price;
+            state.totalRevenue += price;
+            state.todayCakesSold += 1;
+            state.totalCakesSold += 1;
+
+            playSFX('cash');
+            addCustomerLog(`💰 ซื้อ ${recipe.name} สำเร็จ! ได้รับ ₭${formatNumber(price)}`);
+            adjustReputation(+0.03);
+
+            updateHUD();
+            renderPricingTable();
+        }
+
+        function adjustReputation(delta) {
+            state.reputation = Math.min(5.0, Math.max(1.0, state.reputation + delta));
+            state.reputation = Math.round(state.reputation * 100) / 100;
+            document.getElementById('hud-reputation').textContent = state.reputation.toFixed(1);
+        }
+
+        function addCustomerLog(text) {
+            const container = document.getElementById('customer-log-list');
+            if (!container) return;
+
+            if (container.children.length === 1 && container.children[0].hasAttribute('data-i18n')) {
+                container.innerHTML = '';
+            }
+
+            const timeStr = formatMinutesToClock(state.minuteOfDay);
+            const item = document.createElement('div');
+            item.className = 'py-1 flex items-center justify-between border-b border-stone-100 animate-fadeIn';
+            item.innerHTML = `<span>${text}</span><span class="text-[10px] text-stone-400 font-mono">${timeStr}</span>`;
+
+            container.insertBefore(item, container.firstChild);
+            if (container.children.length > 15) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        /* Helper math functions */
+        function moveToTarget(obj, tx, ty, speed) {
+            const dx = tx - obj.x;
+            const dy = ty - obj.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 2) {
+                obj.x += (dx / dist) * speed;
+                obj.y += (dy / dist) * speed;
+            }
+        }
+        function getDist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+
+        /* ==========================================================================
+           7. 2D CANVAS BAKERY RENDERING
+           ========================================================================== */
+        function renderBakeryCanvas() {
+            const canvas = document.getElementById('bakeryCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // Handle responsive canvas sizing
+            const rect = canvas.getBoundingClientRect();
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear Background (Warm Bakery Tile Floor)
+            ctx.fillStyle = '#292524'; // Stone-800
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw Decorative Grid Tiles
+            ctx.strokeStyle = '#383230';
+            ctx.lineWidth = 1;
+            const tileSize = 40;
+            for (let x = 0; x < w; x += tileSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            for (let y = 0; y < h; y += tileSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+
+            // 1. Entrance Door (Left)
+            ctx.fillStyle = '#10b981'; // Emerald
+            ctx.fillRect(20, h - 90, 40, 80);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Kanit';
+            ctx.fillText('ประตูทางเข้า', 15, h - 95);
+
+            // 2. Display Shelf (Center)
+            ctx.fillStyle = '#f5a661'; // Bakery Gold
+            ctx.beginPath();
+            ctx.roundRect(w / 2 - 60, h / 2 - 30, 120, 60, 12);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#db651b';
+            ctx.stroke();
+
+            ctx.fillStyle = '#773317';
+            ctx.font = 'bold 14px Kanit';
+            ctx.textAlign = 'center';
+            ctx.fillText('🍰 ตู้โชว์เค้กสด', w / 2, h / 2 + 5);
+
+            // Display count of cakes on shelf
+            const totalOnShelf = state.shelf.reduce((sum, i) => sum + i.count, 0);
+            ctx.font = '11px Kanit';
+            ctx.fillStyle = '#441d0e';
+            ctx.fillText(`(${totalOnShelf} ชิ้น)`, w / 2, h / 2 + 20);
+
+            // 3. Cashier Desk (Right)
+            ctx.fillStyle = '#3b82f6'; // Blue
+            ctx.beginPath();
+            ctx.roundRect(w - 140, h / 2 - 30, 80, 60, 12);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Kanit';
+            ctx.fillText('💰 แคชเชียร์', w - 100, h / 2 + 5);
+
+            // 4. Kitchen Oven Area (Top Right)
+            ctx.fillStyle = '#f43f5e'; // Rose
+            ctx.beginPath();
+            ctx.roundRect(w - 160, 20, 140, 60, 12);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Kanit';
+            ctx.fillText(`🔥 เตาอบ (${state.activeOvens.length}/${getMaxOvenSlots()})`, w - 90, 55);
+
+            // 5. Draw Active Customers
+            activeCustomers.forEach(c => {
+                // Customer Circle Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(c.x, c.y + 12, 14, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Customer Body Avatar
+                ctx.font = '24px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(c.avatar, c.x, c.y + 8);
+
+                // Thought / Reaction Bubble
+                if (c.bubbleText) {
+                    ctx.font = 'bold 11px Kanit';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.roundRect(c.x - 45, c.y - 32, 90, 22, 6);
+                    ctx.fill();
+                    ctx.strokeStyle = '#f5a661';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#1c1917';
+                    ctx.fillText(c.bubbleText, c.x, c.y - 17);
+                }
+            });
+        }
+
+        /* ==========================================================================
+           8. UI RENDERERS FOR ALL TABS
+           ========================================================================== */
+        function renderKitchenTab() {
+            const grid = document.getElementById('recipes-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            for (let id in state.recipes) {
+                const r = state.recipes[id];
+                
+                // Calculate missing ingredients
+                let canBake = true;
+                let ingListHtml = '';
+
+                for (let ingKey in r.ingredients) {
+                    const req = r.ingredients[ingKey];
+                    const ing = state.ingredients[ingKey];
+                    const have = ing ? ing.amount : 0;
+                    const isEnough = have >= req;
+                    if (!isEnough) canBake = false;
+
+                    ingListHtml += `
+                        <span class="inline-block text-[11px] px-2 py-0.5 rounded ${isEnough ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800 font-bold'}">
+                            ${ing ? ing.name : ingKey}: ${req} ${ing ? ing.unit : ''} (มี ${have})
+                        </span>
+                    `;
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-between hover:shadow-md transition";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-3xl">${r.icon}</span>
+                            <div>
+                                <h4 class="font-bold text-stone-800">${r.name}</h4>
+                                <div class="text-xs text-stone-500">⏱️ เวลาอบ: ${r.bakeTime} วินาที | Yields +5 ชิ้น</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1 mb-3">
+                            <div class="text-xs font-semibold text-stone-600">วัตถุดิบที่ใช้:</div>
+                            <div class="flex flex-wrap gap-1">${ingListHtml}</div>
+                        </div>
+                    </div>
+                    <button onclick="bakeCake('${r.id}')" ${!canBake ? 'disabled' : ''} 
+                        class="w-full py-2.5 rounded-xl font-bold text-xs text-white transition ${canBake ? 'bg-bakery-500 hover:bg-bakery-600 shadow-sm' : 'bg-stone-300 cursor-not-allowed'}">
+                        <i class="fa-solid fa-fire mr-1"></i> เริ่มอบเค้กนี้
+                    </button>
+                `;
+                grid.appendChild(card);
+            }
+
+            document.getElementById('kitchen-oven-count').textContent = `${state.activeOvens.length} / ${getMaxOvenSlots()}`;
+        }
+
+        function updateActiveOvenUI() {
+            const container = document.getElementById('active-ovens-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (state.activeOvens.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-xs text-stone-400 italic py-2">ไม่มีเตาอบที่กำลังทำงานในขณะนี้</div>`;
+                return;
+            }
+
+            state.activeOvens.forEach((o, index) => {
+                const recipe = getRecipe(o.recipeId);
+                const percent = Math.max(0, Math.min(100, ((o.totalTime - o.remainingTime) / o.totalTime) * 100));
+
+                const el = document.createElement('div');
+                el.className = 'bg-stone-800 p-3 rounded-xl border border-stone-700 flex flex-col justify-between';
+                el.innerHTML = `
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold text-amber-300">${recipe.icon} ${recipe.name}</span>
+                        <span class="font-mono text-stone-300">${Math.ceil(o.remainingTime)}s</span>
+                    </div>
+                    <div class="w-full bg-stone-700 rounded-full h-2">
+                        <div class="bg-amber-400 h-2 rounded-full transition-all duration-200" style="width: ${percent}%"></div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function renderPricingTable() {
+            const tbody = document.getElementById('pricing-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let totalCount = 0;
+
+            for (let id in state.recipes) {
+                const r = state.recipes[id];
+                const shelfItem = state.shelf.find(s => s.recipeId === id);
+                const stock = shelfItem ? shelfItem.count : 0;
+                totalCount += stock;
+
+                const currentSellingPrice = r.sellingPrice || r.suggestedPrice;
+                const margin = currentSellingPrice - r.cost;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-amber-50/50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-stone-800 flex items-center gap-2">
+                        <span class="text-xl">${r.icon}</span> ${r.name}
+                    </td>
+                    <td class="p-3 font-bold ${stock > 0 ? 'text-emerald-600' : 'text-rose-500'}">${stock} ชิ้น</td>
+                    <td class="p-3 text-stone-600 font-mono">₭${formatNumber(r.cost)}</td>
+                    <td class="p-3 text-stone-500 font-mono">₭${formatNumber(r.suggestedPrice)}</td>
+                    <td class="p-3">
+                        <input type="number" value="${currentSellingPrice}" step="1000" onchange="updateSellingPrice('${r.id}', this.value)" 
+                            class="w-28 bg-white border border-amber-300 rounded-lg px-2 py-1 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-bakery-500">
+                    </td>
+                    <td class="p-3 font-bold font-mono ${margin >= 0 ? 'text-emerald-600' : 'text-rose-600'}">₭${formatNumber(margin)}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="switchTab('tab-kitchen')" class="text-xs text-bakery-600 hover:underline font-semibold">อบเพิ่ม</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            const maxCap = state.upgrades.shelfLevel * 20;
+            document.getElementById('shelf-count-badge').textContent = `${totalCount} / ${maxCap} ชิ้น`;
+            document.getElementById('shelf-progress-bar').style.width = `${Math.min(100, (totalCount / maxCap) * 100)}%`;
+        }
+
+        function updateSellingPrice(recipeId, newPrice) {
+            const val = parseInt(newPrice);
+            if (isNaN(val) || val < 0) return;
+            state.recipes[recipeId].sellingPrice = val;
+            showToast(`🏷️ อัปเดตราคาขาย ${state.recipes[recipeId].name} เป็น ₭${formatNumber(val)}`, "info");
+            renderPricingTable();
+        }
+
+        function renderIngredientsMarket() {
+            const grid = document.getElementById('ingredients-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            let totalWeight = 0;
+
+            for (let key in state.ingredients) {
+                const ing = state.ingredients[key];
+                totalWeight += ing.amount;
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-1">
+                            <h4 class="font-bold text-stone-800 text-sm">${ing.name}</h4>
+                            <span class="text-xs font-bold text-bakery-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                ₭${formatNumber(ing.price)} / ${ing.unit}
+                            </span>
+                        </div>
+                        <div class="text-xs text-stone-500 mb-3">คลังคงเหลือ: <b class="text-stone-800">${formatNumber(ing.amount)} ${ing.unit}</b></div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="buyIngredient('${key}', 1)" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs py-1.5 rounded-lg transition">+1</button>
+                        <button onclick="buyIngredient('${key}', 10)" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-1.5 rounded-lg transition">+10</button>
+                        <button onclick="buyIngredient('${key}', 50)" class="flex-1 bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs py-1.5 rounded-lg transition">+50</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            document.getElementById('market-stock-weight').textContent = `${formatNumber(Math.round(totalWeight))} units`;
+        }
+
+        function buyIngredient(key, quantity) {
+            const ing = state.ingredients[key];
+            if (!ing) return;
+            const totalCost = ing.price * quantity;
+
+            if (state.cash < totalCost) {
+                showToast(`❌ เงินสดไม่พอ! ต้องการ ₭${formatNumber(totalCost)}`, "error");
+                return;
+            }
+
+            state.cash -= totalCost;
+            state.todayExpenses += totalCost;
+            state.totalExpenses += totalCost;
+            ing.amount += quantity;
+
+            playSFX('cash');
+            showToast(`🛒 ซื้อ ${ing.name} +${quantity} ${ing.unit} (จ่าย ₭${formatNumber(totalCost)})`, "success");
+
+            updateHUD();
+            renderIngredientsMarket();
+            renderKitchenTab();
+        }
+
+        function renderUpgradesTab() {
+            const container = document.getElementById('upgrades-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const list = [
+                {
+                    key: 'ovenLevel',
+                    name: '🔥 อัปเกรดเตาอบ (Oven Capacity)',
+                    desc: 'เพิ่มช่องการอบและเร่งความเร็วในการทำเค้ก',
+                    level: state.upgrades.ovenLevel,
+                    max: 3,
+                    cost: state.upgrades.ovenLevel * 500000
+                },
+                {
+                    key: 'shelfLevel',
+                    name: '🍰 อัปเกรดตู้โชว์ (Display Case)',
+                    desc: 'เพิ่มความจุในการวางเค้กหน้าร้าน',
+                    level: state.upgrades.shelfLevel,
+                    max: 3,
+                    cost: state.upgrades.shelfLevel * 350000
+                },
+                {
+                    key: 'decorLevel',
+                    name: '✨ ตกแต่งร้าน (Bakery Decor)',
+                    desc: 'เพิ่มความอดทนของลูกค้าและคะแนนความนิยม',
+                    level: state.upgrades.decorLevel,
+                    max: 5,
+                    cost: state.upgrades.decorLevel * 400000
+                },
+                {
+                    key: 'cashierLevel',
+                    name: '🧑‍🍳 จ้างพนักงานแคชเชียร์ (Staff Cashier)',
+                    desc: 'เพิ่มความเร็วในการคิดเงินและต้อนรับลูกค้า',
+                    level: state.upgrades.cashierLevel,
+                    max: 2,
+                    cost: (state.upgrades.cashierLevel + 1) * 600000
+                }
+            ];
+
+            list.forEach(u => {
+                const isMax = u.level >= u.max;
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-stone-800">${u.name}</h4>
+                            <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">Lv. ${u.level} / ${u.max}</span>
+                        </div>
+                        <p class="text-xs text-stone-500 mb-4">${u.desc}</p>
+                    </div>
+                    <button onclick="upgradeStore('${u.key}', ${u.cost})" ${isMax ? 'disabled' : ''} 
+                        class="w-full py-2.5 rounded-xl font-bold text-xs text-white transition ${!isMax ? 'bg-emerald-600 hover:bg-emerald-700 shadow-sm' : 'bg-stone-300 cursor-not-allowed'}">
+                        ${isMax ? 'ระดับสูงสุดแล้ว' : `อัปเกรด (₭${formatNumber(u.cost)})`}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function upgradeStore(key, cost) {
+            if (state.cash < cost) {
+                showToast(`❌ เงินสดไม่พอสำหรับอัปเกรด (ต้องการ ₭${formatNumber(cost)})`, "error");
+                return;
+            }
+
+            state.cash -= cost;
+            state.todayExpenses += cost;
+            state.upgrades[key] += 1;
+
+            playSFX('ding');
+            showToast("🎉 อัปเกรดร้านสำเร็จ!", "success");
+
+            updateHUD();
+            renderUpgradesTab();
+            renderPricingTable();
+        }
+
+        function renderOrdersTab() {
+            const grid = document.getElementById('special-orders-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            state.specialOrders.forEach(o => {
+                const recipe = getRecipe(o.recipeId);
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-stone-800">👤 ${o.customerName}</h4>
+                            <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">ส่งภายในวันที่ ${o.dueDay}</span>
+                        </div>
+                        <div class="text-xs text-stone-600 space-y-1 mb-4">
+                            <div>สั่งซื้อ: <b>${recipe.icon} ${recipe.name} (${o.count} ชิ้น)</b></div>
+                            <div>รางวัล: <b class="text-emerald-600 font-mono">₭${formatNumber(o.reward)}</b></div>
+                        </div>
+                    </div>
+                    <button onclick="deliverOrder(${o.id})" ${o.completed ? 'disabled' : ''} 
+                        class="w-full py-2.5 rounded-xl font-bold text-xs text-white transition ${!o.completed ? 'bg-bakery-500 hover:bg-bakery-600 shadow-sm' : 'bg-stone-300 cursor-not-allowed'}">
+                        ${o.completed ? 'ส่งมอบแล้ว' : 'ส่งมอบออเดอร์'}
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function deliverOrder(orderId) {
+            const order = state.specialOrders.find(o => o.id === orderId);
+            if (!order || order.completed) return;
+
+            const shelfItem = state.shelf.find(s => s.recipeId === order.recipeId);
+            if (!shelfItem || shelfItem.count < order.count) {
+                showToast(`❌ เค้กในตู้โชว์ไม่พอส่งมอบ (ต้องการ ${order.count} ชิ้น)`, "error");
+                return;
+            }
+
+            shelfItem.count -= order.count;
+            state.cash += order.reward;
+            state.todayRevenue += order.reward;
+            order.completed = true;
+
+            playSFX('cash');
+            showToast(`🎁 ส่งมอบออเดอร์พิเศษสำเร็จ! ได้รับ ₭${formatNumber(order.reward)}`, "success");
+            adjustReputation(+0.2);
+
+            updateHUD();
+            renderOrdersTab();
+            renderPricingTable();
+        }
+
+        function renderFinanceTab() {
+            document.getElementById('fin-total-revenue').textContent = `₭${formatNumber(state.totalRevenue)}`;
+            document.getElementById('fin-total-expenses').textContent = `₭${formatNumber(state.totalExpenses)}`;
+            const net = state.totalRevenue - state.totalExpenses;
+            document.getElementById('fin-net-profit').textContent = `₭${formatNumber(net)}`;
+            document.getElementById('fin-cakes-sold').textContent = `${formatNumber(state.totalCakesSold)} ชิ้น`;
+
+            const tbody = document.getElementById('finance-history-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            state.financeHistory.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-stone-50";
+                tr.innerHTML = `
+                    <td class="p-2 font-bold text-stone-700">วันที่ ${h.day}</td>
+                    <td class="p-2 text-emerald-600 font-mono">₭${formatNumber(h.revenue)}</td>
+                    <td class="p-2 text-stone-600 font-mono">₭${formatNumber(h.cogs)}</td>
+                    <td class="p-2 text-rose-600 font-mono">₭${formatNumber(h.expenses)}</td>
+                    <td class="p-2 font-bold font-mono ${h.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}">₭${formatNumber(h.netProfit)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* ==========================================================================
+           9. NAVIGATION & GENERAL CONTROLS
+           ========================================================================== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-bakery-500', 'text-bakery-600', 'font-semibold');
+                el.classList.add('border-transparent', 'text-stone-600');
+            });
+
+            const activeTab = document.getElementById(tabId);
+            if (activeTab) activeTab.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-stone-600');
+                activeBtn.classList.add('border-bakery-500', 'text-bakery-600', 'font-semibold');
+            }
+
+            // Refresh tab contents
+            if (tabId === 'tab-kitchen') renderKitchenTab();
+            if (tabId === 'tab-pricing') renderPricingTable();
+            if (tabId === 'tab-market') renderIngredientsMarket();
+            if (tabId === 'tab-upgrades') renderUpgradesTab();
+            if (tabId === 'tab-orders') renderOrdersTab();
+            if (tabId === 'tab-finance') renderFinanceTab();
+
+            playSFX('click');
+        }
+
+        function setGameSpeed(s) {
+            state.speed = s;
+            document.querySelectorAll('#top-hud button').forEach(b => {
+                if (b.id.startsWith('btn-speed-')) {
+                    b.classList.remove('bg-amber-500', 'text-stone-900', 'font-bold');
+                    b.classList.add('hover:bg-stone-700', 'text-stone-300');
+                }
+            });
+            const activeBtn = document.getElementById(`btn-speed-${s === 0 ? 'pause' : s}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('hover:bg-stone-700', 'text-stone-300');
+                activeBtn.classList.add('bg-amber-500', 'text-stone-900', 'font-bold');
+            }
+            playSFX('click');
+        }
+
+        function toggleStoreOpen() {
+            state.isOpen = !state.isOpen;
+            showToast(state.isOpen ? "☀️ เปิดร้านแล้ว!" : "🌙 ปิดร้านเรียบร้อย", "info");
+            playSFX('doorbell');
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-shop-name').textContent = state.shopName;
+            document.getElementById('hud-cash').textContent = `₭${formatNumber(state.cash)}`;
+            document.getElementById('hud-day').textContent = `วันที่ ${state.day}`;
+            document.getElementById('hud-clock').textContent = formatMinutesToClock(state.minuteOfDay);
+
+            const statusEl = document.getElementById('hud-store-status');
+            const btnEl = document.getElementById('btn-toggle-store');
+            const btnTextEl = document.getElementById('lbl-toggle-store');
+
+            if (state.isOpen) {
+                statusEl.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                statusEl.innerHTML = `<i class="fa-solid fa-door-open mr-1"></i>${t('store_open')}`;
+                if (btnEl) btnEl.className = "px-5 py-2.5 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md transition flex items-center gap-2";
+                if (btnTextEl) btnTextEl.textContent = t('btn_close_shop');
+            } else {
+                statusEl.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                statusEl.innerHTML = `<i class="fa-solid fa-door-closed mr-1"></i>${t('store_closed')}`;
+                if (btnEl) btnEl.className = "px-5 py-2.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md transition flex items-center gap-2";
+                if (btnTextEl) btnTextEl.textContent = t('btn_open_shop');
+            }
+
+            document.getElementById('stat-today-customers').textContent = `${state.todayCakesSold} คน`;
+            document.getElementById('stat-today-revenue').textContent = `₭${formatNumber(state.todayRevenue)}`;
+        }
+
+        /* ==========================================================================
+           10. SETTINGS & SAVE/LOAD UTILITIES
+           ========================================================================== */
+        function changeLanguage(lang) {
+            state.settings.language = lang;
+            applyI18nTexts();
+            showToast(`🌐 เปลี่ยนภาษาเป็น ${lang.toUpperCase()}`, "info");
+        }
+
+        function updateShopName() {
+            const input = document.getElementById('setting-shop-name-input');
+            if (input && input.value.trim()) {
+                state.shopName = input.value.trim();
+                updateHUD();
+                showToast("✏️ เปลี่ยนชื่อร้านเรียบร้อย!", "success");
+            }
+        }
+
+        function toggleSFX(val) { state.settings.sfx = val; }
+        function toggleBGM(val) { state.settings.bgm = val; }
+
+        function getGameStatePayload() {
+            return {
+                shopName: state.shopName,
+                cash: state.cash,
+                reputation: state.reputation,
+                day: state.day,
+                minuteOfDay: state.minuteOfDay,
+                totalRevenue: state.totalRevenue,
+                totalExpenses: state.totalExpenses,
+                totalCakesSold: state.totalCakesSold,
+                ingredients: state.ingredients,
+                recipes: state.recipes,
+                shelf: state.shelf,
+                upgrades: state.upgrades,
+                specialOrders: state.specialOrders,
+                financeHistory: state.financeHistory,
+                settings: state.settings,
+                savedAt: Date.now()
+            };
+        }
+
+        function applyGameStatePayload(payload) {
+            if (!payload) return;
+            if (payload.shopName) state.shopName = payload.shopName;
+            if (payload.cash !== undefined) state.cash = payload.cash;
+            if (payload.reputation) state.reputation = payload.reputation;
+            if (payload.day) state.day = payload.day;
+            if (payload.minuteOfDay) state.minuteOfDay = payload.minuteOfDay;
+            if (payload.totalRevenue) state.totalRevenue = payload.totalRevenue;
+            if (payload.totalExpenses) state.totalExpenses = payload.totalExpenses;
+            if (payload.totalCakesSold) state.totalCakesSold = payload.totalCakesSold;
+            if (payload.ingredients) state.ingredients = payload.ingredients;
+            if (payload.recipes) state.recipes = payload.recipes;
+            if (payload.shelf) state.shelf = payload.shelf;
+            if (payload.upgrades) state.upgrades = payload.upgrades;
+            if (payload.specialOrders) state.specialOrders = payload.specialOrders;
+            if (payload.financeHistory) state.financeHistory = payload.financeHistory;
+            if (payload.settings) state.settings = payload.settings;
+
+            updateHUD();
+            renderPricingTable();
+            renderIngredientsMarket();
+            renderKitchenTab();
+        }
+
+        function saveLocalBackup() {
+            try {
+                localStorage.setItem('cake_shop_sim_save', JSON.stringify(getGameStatePayload()));
+            } catch (e) {}
+        }
+
+        function loadLocalBackup() {
+            try {
+                const data = localStorage.getItem('cake_shop_sim_save');
+                if (data) {
+                    applyGameStatePayload(JSON.parse(data));
+                }
+            } catch (e) {}
+        }
+
+        window.manualCloudSave = async function() {
+            if (window.saveToFirestore) {
+                const ok = await window.saveToFirestore();
+                if (ok) showToast("☁️ บันทึกข้อมูลลง Cloud สำเร็จ!", "success");
+            } else {
+                saveLocalBackup();
+                showToast("💾 บันทึกลง Local Storage สำเร็จ!", "success");
+            }
+        };
+
+        window.manualCloudLoad = async function() {
+            if (window.loadFromFirestore) {
+                const ok = await window.loadFromFirestore();
+                if (!ok) loadLocalBackup();
+            } else {
+                loadLocalBackup();
+                showToast("💾 โหลดเซฟจาก Local Storage เรียบร้อย", "info");
+            }
+        };
+
+        function confirmResetGame() {
+            if (confirm("ต้องการรีเซ็ตข้อมูลเกมทั้งหมดและเริ่มใหม่ใช่หรือไม่?")) {
+                localStorage.removeItem('cake_shop_sim_save');
+                location.reload();
+            }
+        }
+
+        function updateCloudSyncBadge(status) {
+            const text = document.getElementById('cloud-sync-text');
+            const badge = document.getElementById('cloud-sync-badge');
+            if (!text || !badge) return;
+
+            if (status === 'saving') {
+                text.textContent = 'Saving...';
+                badge.className = 'text-xs text-amber-300 flex items-center gap-1 bg-amber-900/40 px-2 py-1 rounded-lg border border-amber-600/50';
+            } else if (status === 'synced') {
+                text.textContent = 'Synced';
+                badge.className = 'text-xs text-emerald-300 flex items-center gap-1 bg-emerald-900/40 px-2 py-1 rounded-lg border border-emerald-600/50';
+            } else {
+                text.textContent = 'Local';
+                badge.className = 'text-xs text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-1 rounded-lg border border-stone-700';
+            }
+        }
+
+        /* Helper formatting functions */
+        function formatNumber(num) { return num ? num.toLocaleString('th-TH') : '0'; }
+        function formatMinutesToClock(mins) {
+            const h = Math.floor(mins / 60) % 24;
+            const m = Math.floor(mins % 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                warning: 'bg-amber-500 text-stone-900',
+                info: 'bg-stone-800 text-white'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function openModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        }
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        }
+
+        window.loginAsGuest = function() {
+            closeModal('modal-auth');
+            showToast("🎮 กำลังเล่นในโหมด Guest", "info");
+        };
+
+        // Attach event listeners to window scope
+        window.switchTab = switchTab;
+        window.setGameSpeed = setGameSpeed;
+        window.toggleStoreOpen = toggleStoreOpen;
+        window.bakeCake = bakeCake;
+        window.updateSellingPrice = updateSellingPrice;
+        window.buyIngredient = buyIngredient;
+        window.upgradeStore = upgradeStore;
+        window.deliverOrder = deliverOrder;
+        window.changeLanguage = changeLanguage;
+        window.updateShopName = updateShopName;
+        window.toggleSFX = toggleSFX;
+        window.toggleBGM = toggleBGM;
+        window.confirmResetGame = confirmResetGame;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+
+        /* ==========================================================================
+           11. INITIALIZATION ON PAGE LOAD
+           ========================================================================== */
+        window.onload = function() {
+            loadLocalBackup();
+            applyI18nTexts();
+            updateHUD();
+
+            renderKitchenTab();
+            renderPricingTable();
+            renderIngredientsMarket();
+            renderUpgradesTab();
+            renderOrdersTab();
+            renderFinanceTab();
+
+            // Start Animation Loop
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
